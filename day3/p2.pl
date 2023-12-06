@@ -84,7 +84,8 @@ find_possible_ranges(LineNum, [H | T], Store, Idx, R) :-
             (in_range(TopRightAbs) -> F = [TopRightAbs] ; F = []),
             (in_range(BottomLeftAbs) -> G = [BottomLeftAbs] ; G = []),
             (in_range(BottomRightAbs) -> J = [BottomRightAbs] ; J = []),
-            concatenate_n_lists([A, B, C, D, E, F, G, J, Store], NewStore),
+            concatenate_n_lists([A, B, C, D, E, F, G, J], Temp),
+            NewStore = [Temp | Store],
             find_possible_ranges(LineNum, T, NewStore, NextIdx, R) 
         )
     ;   NextIdx is Idx + 1, find_possible_ranges(LineNum, T, Store, NextIdx, R).
@@ -96,11 +97,20 @@ parse_nums_and_ranges(S, R, LineNum) :-
 parse_possible_ranges(S, R, LineNum) :-
     find_possible_ranges(LineNum, S, [], 0, R).
 
+multi([A, B], C) :- C is A * B.
+
 number_in_index(Idx, [_, S, E]) :-
     Idx >= S, Idx =< E.
 
-solve_helper(N, Idx, R) :-
-    include(number_in_index(Idx), N, R), writeln(R).
+solve_helper_two(N, Idx, R) :- 
+    include(number_in_index(Idx), N, R).
+
+solve_helper(N, Indexes, R) :-
+    maplist(solve_helper_two(N), Indexes, T1),
+    concatenate_n_lists(T1, T2),
+    remove_duplicates(T2, T3),
+    list_length(T3, Len),
+    Len = 2 -> maplist(get_num, T3, Hs), multi(Hs, R); 0 = R.
 
 solve(N, P, R) :- 
     maplist(solve_helper(N), P, R).
@@ -261,9 +271,6 @@ main() :-
     concatenate_n_lists(Ns, NumsAndRanges),
     maplist_with_index(parse_possible_ranges, I, Ps, 0),
     concatenate_n_lists(Ps, PossibleRanges),
-    solve(NumsAndRanges, PossibleRanges, T1),
-    concatenate_n_lists(T1, T2),
-    remove_duplicates(T2, T3),
-    maplist(get_num, T3, R),
+    solve(NumsAndRanges, PossibleRanges, R),
     sum_list(R, Sum),
     writeln(Sum).
