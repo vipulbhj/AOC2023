@@ -1,10 +1,6 @@
 :- set_prolog_flag(double_quotes, chars).
 
 space            --> " ".
-red              --> "red".
-blue             --> "blue".
-green            --> "green".
-
 pair_seperator   --> ", ".
 turn_seperator   --> "; ".
 
@@ -14,9 +10,9 @@ integer_([D|Ds]) --> digit(D), integer_(Ds).
 
 integer(Max)     --> integer_(Cs), { number_chars(N, Cs), N =< Max }.
 
-pair             --> integer(12), space, red.
-pair             --> integer(14), space, blue.
-pair             --> integer(13), space, green.
+pair             --> integer(12), space, "red".
+pair             --> integer(14), space, "blue".
+pair             --> integer(13), space, "green".
 
 record           --> pair.
 record           --> pair, pair_seperator, record.
@@ -26,16 +22,19 @@ turn             --> record, turn_seperator, turn.
 
 game             --> "Game ", integer(1000), ": ", turn.
 
-first([X], X).
-first([H | _], H).
-
 last([X], X).
 last([_|T], R) :- last(T, R).
 
-gameNum(S, R) :- split_string(S, ":", "", T),
-  first(T, T1),
-  split_string(T1, " ", "", T2),
-  last(T2, T3), atom_number(T3, R).
+parse_game_string(GameString, GameNumber) :-
+  split_string(GameString, ":", "", [GamePart|_]),
+  split_string(GamePart, " ", "", Parts),
+  last(Parts, GameNumStr),
+  atom_number(GameNumStr, GameNumber).
+
+process_games(GameStrings) :-
+  maplist(parse_game_string, GameStrings, GameNumbers),
+  sum_list(GameNumbers, TotalSum),
+  writeln(TotalSum).
 
 main() :-
   INPUT = [
@@ -141,7 +140,5 @@ main() :-
     "Game 100: 5 green, 11 blue, 6 red; 5 green, 12 blue; 1 green, 14 blue, 1 red; 3 blue, 5 red, 6 green; 9 blue; 6 red"
   ],
   include(phrase(game), INPUT, T),
-  maplist(gameNum, T, Ns),
-  sum_list(Ns, O),
-  writeln(O).
+  process_games(T).
    
