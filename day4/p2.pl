@@ -17,19 +17,56 @@ process_list(Xs, R) :-
   include(is_string_number, Xs, T),
   maplist(atom_number, T, R).
 
-solve_helper(Draws, Num, R) :- member(Num, Draws) -> R = 1 ; R = 0.
+make_pair_helper(Draws, Num, R) :- member(Num, Draws) -> R = 1 ; R = 0.
 
-solve(W, D, R, Idx) :- 
-  maplist(solve_helper(D), W, T),
+make_pair(W, D, R, Idx) :- 
+  maplist(make_pair_helper(D), W, T),
   sum_list(T, WinCount),
   R = [Idx, WinCount].
 
-find_power(Card, R, Idx) :-
+win_freq_pairs(Card, R, Idx) :-
   split_string(Card, ":", "", [_, Rest]),
   split_string(Rest, "|", "", [Ws, Ds]),
   split_string(Ws, " ", "", Wss), process_list(Wss, Winners), 
   split_string(Ds, " ", "", Dss), process_list(Dss, Draws),
-  solve(Winners, Draws, R, Idx).
+  make_pair(Winners, Draws, WinFreqPairs, Idx),
+  R = WinFreqPairs. 
+
+elem_count(L, E, N) :-
+  include(=(E), L, L2), length(L2, N).
+
+num_range(_,0,[]) :- !.
+num_range(X,X,[X]) :- !.
+num_range(X,Y,[X|Xs]) :-
+    X =< Y,
+    Z is X+1,
+    num_range(Z,Y,Xs).
+
+add_elem_to_collection_helper(Num, Elem, Collection, Res) :-
+  NewNum is Num + Elem,
+  Res = [NewNum | Collection].
+
+add_elem_to_collection(Collection, Num, Count, R) :-
+  num_range(1, Count, L),
+  foldl(add_elem_to_collection_helper(Num), L, Collection, V),
+  V = R.
+
+add_elem_to_collection_n_times_helper(Num, Count, _, Collection, Res) :-
+  add_elem_to_collection(Collection, Num, Count, Res).
+
+add_elem_to_collection_n_times(Times, Collection, Num, Power, NewCollection) :-
+  num_range(1, Times, L),
+  foldl(add_elem_to_collection_n_times_helper(Num, Power), L, Collection, V),
+  NewCollection = V.
+
+solve([], _, R, R).
+solve([[Num, Power] | T], Collection, Sum, Res) :-
+  elem_count(Collection, Num, Count),
+  TotalCardCount is Count + 1,
+  NewSum is Sum + TotalCardCount,
+  add_elem_to_collection_n_times(TotalCardCount, Collection, Num, Power, NewCollection),
+  solve(T, NewCollection, NewSum, Res).
+  
 
 main() :-
   Input = [
@@ -227,5 +264,6 @@ main() :-
     "Card 192: 29 68 86 19 93 50 55  5 12 41 | 83 36 30 69 40 16 38 54 99 61 21 79 81 41 65  3 26 27 31 35 39  8 25 49 70",
     "Card 193: 53 40  5 39 13 12 27 57 68 45 | 67 10 87 64 22  6 77 17 20 24 78 52 19 18 99 88 66 31 65 47 11 61 90  9 92"
   ],
-  maplist_with_index(find_power, Input, Res, 1),
+  maplist_with_index(win_freq_pairs, Input, WinFreqPairs, 1),
+  solve(WinFreqPairs, [], 0, Res),
   writeln(Res).
